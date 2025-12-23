@@ -1,0 +1,75 @@
+body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: linear-gradient(120deg, #1c92d2, #f2fcfe);
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.container {
+    width: 360px;
+    text-align: center;
+}
+
+h1 {
+    color: #0b3c5d;
+}
+
+.card {
+    background: white;
+    padding: 20px;
+    margin-top: 12px;
+    border-radius: 10px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    text-align: left;
+}
+
+label {
+    display: block;
+    margin-top: 10px;
+    color: #0b3c5d;
+}
+
+input, select {
+    width: 100%;
+    padding: 8px;
+    margin-top: 6px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-sizing: border-box;
+}
+
+button, .button-link {
+    margin-top: 16px;
+    width: 100%;
+    padding: 10px;
+    background: #1c92d2;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+button:hover, .button-link:hover {
+    background: #0f5f87;
+}
+
+.message {
+    color: #b83232;
+    min-height: 20px;
+}
+
+a {
+    color: #0b3c5d;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
