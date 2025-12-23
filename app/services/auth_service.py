@@ -37,8 +37,10 @@ class AuthService:
         self.session_repo.delete_expired()
         token = security.generate_token()
         expires_at = security.token_expiration(60)
+        print(f"[DEBUG] autenticar: Creando sesión con expires_at: {expires_at}")
         session = Session(user_id=user.id, token=token, expires_at=expires_at)
         session = self.session_repo.create(session)
+        print(f"[DEBUG] autenticar: Sesión creada - expires_at después de guardar: {session.expires_at}")
         return user, session
 
     def cerrar_sesion(self, token: str) -> None:
@@ -47,8 +49,22 @@ class AuthService:
 
     def obtener_usuario_actual(self, token: str) -> Optional[User]:
         if not token:
+            print("[DEBUG] obtener_usuario_actual: No token provided")
             return None
+        print(f"[DEBUG] obtener_usuario_actual: Buscando sesión para token: {token}")
         session = self.session_repo.find_by_token(token)
-        if not session or session.expires_at <= datetime.now(timezone.utc):
+        if not session:
+            print("[DEBUG] obtener_usuario_actual: No se encontró sesión para este token")
             return None
-        return self.user_repo.find_by_id(session.user_id)
+        print(f"[DEBUG] obtener_usuario_actual: Sesión encontrada - user_id: {session.user_id}, expires_at: {session.expires_at}")
+        expires_at = session.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
+        print(f"[DEBUG] obtener_usuario_actual: Comparando expires_at ({expires_at}) con now ({now})")
+        if expires_at <= now:
+            print("[DEBUG] obtener_usuario_actual: Sesión expirada")
+            return None
+        user = self.user_repo.find_by_id(session.user_id)
+        print(f"[DEBUG] obtener_usuario_actual: Usuario encontrado: {user.email if user else 'None'}")
+        return user

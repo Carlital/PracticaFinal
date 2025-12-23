@@ -13,7 +13,7 @@
 
       <label>Nombre</label>
       <input type="text" name="nombre" required minlength="3" maxlength="60"
-             pattern="^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?:\s[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*$"
+             pattern="^[A-Za-z ]{3,60}"
              title="Ingresa solo letras y espacios. Mínimo 3 caracteres."
              oninvalid="this.setCustomValidity('Nombre inválido: usa solo letras y espacios (mín. 3 caracteres).')"
              oninput="this.setCustomValidity('')"
@@ -29,7 +29,7 @@
 
       <label>Contraseña</label>
       <input type="password" name="password" required minlength="8" maxlength="64"
-             pattern="^(?=.*[A-Za-z])(?=.*\d)[^\s]{8,64}$"
+             pattern="^(?=.*[A-Za-z])(?=.*\d)[^\s]{8,64}"
              title="Mínimo 8 caracteres, al menos 1 letra y 1 número. Sin espacios."
              oninvalid="this.setCustomValidity('Contraseña inválida: mínimo 8 caracteres, al menos 1 letra y 1 número, sin espacios.')"
              oninput="this.setCustomValidity('')"

@@ -1,5 +1,6 @@
 import http.cookies
 import os
+import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from string import Template
 from urllib.parse import parse_qs, urlparse
@@ -8,6 +9,10 @@ from app.core.config import Settings
 from app.repositories.session_repository import SessionRepository
 from app.repositories.user_repository import UserRepository
 from app.services.auth_service import AuthService
+
+# Forzar salida sin buffer para ver los logs
+sys.stdout.reconfigure(line_buffering=True)
+sys.stderr.reconfigure(line_buffering=True)
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -76,6 +81,7 @@ class SimpleHandler(BaseHTTPRequestHandler):
         try:
             self.auth_service.registrar_usuario(nombre, email, password, rol_id)
             self.redirect("/login?msg=Registro%20exitoso")
+            return
         except ValueError as exc:
             self.render_html("register.html", {"message": str(exc)})
 
@@ -87,19 +93,15 @@ class SimpleHandler(BaseHTTPRequestHandler):
         password = data.get("password", [""])[0]
         try:
             user, session = self.auth_service.autenticar(email, password)
-            cookie = http.cookies.SimpleCookie()
-            cookie["session_token"] = session.token
-            cookie["session_token"]["httponly"] = True
-            cookie["session_token"]["path"] = "/"
-            cookie["session_token"]["samesite"] = "Lax"
-            # Expira al mismo tiempo que la sesión
-            expires = session.expires_at.strftime("%a, %d %b %Y %H:%M:%S GMT")
-            cookie["session_token"]["expires"] = expires
+            
+            # Construir cookie manualmente en formato correcto
+            cookie_value = f"session_token={session.token}; Path=/; Max-Age=3600; HttpOnly; SameSite=Lax"
+            
             self.send_response(302)
+            self.send_header("Set-Cookie", cookie_value)
             self.send_header("Location", "/dashboard")
-            # Enviar cookie correctamente formateada
-            self.send_header("Set-Cookie", cookie["session_token"].OutputString())
             self.end_headers()
+            return
         except ValueError as exc:
             self.render_html("login.html", {"message": str(exc)})
 
@@ -108,12 +110,10 @@ class SimpleHandler(BaseHTTPRequestHandler):
         if not user:
             self.redirect("/login")
             return
-        # Si entra a /dashboard, redirige al dashboard correspondiente
         if path == "/dashboard":
             target = "/dashboard/admin" if user.rol_id == 1 else "/dashboard/usuario"
             self.redirect(target)
             return
-        # Evita acceso cruzado de dashboards
         if path == "/dashboard/admin" and user.rol_id != 1:
             self.redirect("/dashboard/usuario")
             return
@@ -133,12 +133,12 @@ class SimpleHandler(BaseHTTPRequestHandler):
     def handle_logout(self):
         token = self.get_session_token()
         self.auth_service.cerrar_sesion(token)
-        cookie = http.cookies.SimpleCookie()
-        cookie["session_token"] = ""
-        cookie["session_token"]["path"] = "/"
-        cookie["session_token"]["expires"] = "Thu, 01 Jan 1970 00:00:00 GMT"
+        expires = "Thu, 01 Jan 1970 00:00:00 GMT"
+        cookie_header = (
+            f"session_token=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Expires={expires}"
+        )
         self.send_response(302)
-        self.send_header("Set-Cookie", cookie["session_token"].OutputString())
+        self.send_header("Set-Cookie", cookie_header)
         self.send_header("Location", "/login")
         self.end_headers()
 
@@ -161,7 +161,9 @@ class SimpleHandler(BaseHTTPRequestHandler):
 
     def get_session_token(self) -> str:
         cookie_header = self.headers.get("Cookie")
+        print(f"[DEBUG] Cookie header: {cookie_header}")
         if not cookie_header:
+            print("[DEBUG] No cookie header found")
             return ""
         cookies = http.cookies.SimpleCookie()
         cookies.load(cookie_header)
@@ -170,7 +172,9 @@ class SimpleHandler(BaseHTTPRequestHandler):
 
     def get_current_user(self):
         token = self.get_session_token()
-        return self.auth_service.obtener_usuario_actual(token)
+        user = self.auth_service.obtener_usuario_actual(token)
+        print(f"[DEBUG] User from token: {user.email if user else 'None'}")
+        return user
 
     def render_html(self, template_name: str, context: dict):
         template = load_template(template_name)

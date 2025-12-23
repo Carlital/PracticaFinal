@@ -35,12 +35,21 @@ class SessionRepository:
                 row = cur.fetchone()
                 if not row:
                     return None
+                expires_at = row["expires_at"]
+                created_at = row["created_at"]
+                # Normaliza a UTC con tzinfo para evitar errores de comparación
+                if expires_at.tzinfo is None:
+                    from datetime import timezone
+                    expires_at = expires_at.replace(tzinfo=timezone.utc)
+                if created_at.tzinfo is None:
+                    from datetime import timezone
+                    created_at = created_at.replace(tzinfo=timezone.utc)
                 return Session(
                     id=row["id"],
                     user_id=row["user_id"],
                     token=row["token"],
-                    expires_at=row["expires_at"],
-                    created_at=row["created_at"],
+                    expires_at=expires_at,
+                    created_at=created_at,
                 )
 
     def delete(self, token: str) -> None:
