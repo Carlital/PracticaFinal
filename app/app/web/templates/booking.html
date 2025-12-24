@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reservar Cancha | Centro Deportivo</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body>
+    <!-- Barra Superior (Header) Semántica -->
+    <header class="dashboard-header">
+        <div class="header-left">
+            <div class="header-logo">Centro Deportivo</div>
+            <div class="header-user-info">
+                <span class="user-name">${nombre}</span> 
+                <span class="badge" style="background: #f0f0f0; color: #333;">${rol}</span>
+            </div>
+        </div>
+        <a href="/dashboard" class="btn btn-secondary">Volver al Dashboard</a>
+    </header>
+
+    <!-- Contenido Principal -->
+    <div class="container booking-container">
+        <div class="card">
+            <h1 style="text-align:center; color:var(--primary-color);">📅 Nueva Reserva</h1>
+            <p style="text-align:center; color:#666; margin-bottom:25px;">Completa los datos para agendar tu partido.</p>
+            $message
+            <form method="POST" action="/reservar">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="cancha">🏟️ Cancha</label>
+                        <select name="cancha_id" id="cancha" required>
+                            ${options}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="precio_hora">💲 Precio por Hora</label>
+                        <input type="text" id="precio_hora" class="readonly-input" readonly>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="fecha_dia">📆 Fecha</label>
+                        <input type="date" id="fecha_dia" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="hora_inicio">⏰ Hora Inicio</label>
+                        <select id="hora_inicio" required></select>
+                        <input type="hidden" name="fecha_inicio" id="fecha_inicio">
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1; text-align: center;">
+                        <label for="duracion">⏱️ Duración (horas)</label>
+                        <input type="number" name="duracion" id="duracion" value="1" min="1" max="3" required style="max-width: 150px; margin: 0 auto;">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 15px;">
+                    <label for="total">💰 Total a Pagar Estimado</label>
+                    <input type="text" id="total" class="readonly-input" style="font-weight:bold; color:var(--primary-color); font-size:1.1rem;" readonly>
+                </div>
+
+                <button type="submit">Confirmar Reserva</button>
+                <a href="/dashboard" class="btn btn-secondary" style="margin-top: 10px; width: 100%; display: block;">Cancelar</a>
+            </form>
+        </div>
+    </div>
+
+    <!-- Pie de Página (Footer) -->
+    <footer class="dashboard-footer">
+        <p>&copy; $year Centro Deportivo. Todos los derechos reservados.</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const canchaSelect = document.getElementById('cancha');
+            const precioInput = document.getElementById('precio_hora');
+            const duracionInput = document.getElementById('duracion');
+            const totalInput = document.getElementById('total');
+            
+            const fechaDiaInput = document.getElementById('fecha_dia');
+            const horaInicioSelect = document.getElementById('hora_inicio');
+            const hiddenFechaInicio = document.getElementById('fecha_inicio');
+
+            // 1. Configurar fecha mínima (Ahora)
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); // Ajuste zona horaria local
+            fechaDiaInput.min = now.toISOString().slice(0, 10);
+
+            // 2. Poblar selector de horas (07:00 - 22:00)
+            for (let i = 7; i <= 22; i++) {
+                const hour = i.toString().padStart(2, '0') + ':00';
+                const option = document.createElement('option');
+                option.value = hour;
+                option.textContent = hour;
+                horaInicioSelect.appendChild(option);
+            }
+            // Actualizar valor oculto inicial
+            updateHiddenDate();
+
+            // 3. Función de cálculo
+            function updateCalculations() {
+                const selectedOption = canchaSelect.options[canchaSelect.selectedIndex];
+                const price = parseFloat(selectedOption.dataset.price || 0);
+                const duration = parseInt(duracionInput.value || 0);
+                
+                precioInput.value = '$$' + price.toFixed(2);
+                totalInput.value = '$$' + (price * duration).toFixed(2);
+            }
+            
+            function updateHiddenDate() {
+                if(fechaDiaInput.value && horaInicioSelect.value) {
+                    hiddenFechaInicio.value = fechaDiaInput.value + 'T' + horaInicioSelect.value;
+                }
+            }
+
+            // Listeners
+            canchaSelect.addEventListener('change', updateCalculations);
+            duracionInput.addEventListener('input', updateCalculations);
+            fechaDiaInput.addEventListener('change', updateHiddenDate);
+            horaInicioSelect.addEventListener('change', updateHiddenDate);
+
+            // Inicializar
+            updateCalculations();
+        });
+    </script>
+
+
+</body>
+</html>
