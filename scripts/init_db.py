@@ -22,10 +22,10 @@ def run_migration():
     load_env()
     conn = psycopg2.connect(
         host=os.environ.get("DB_HOST", "localhost"),
-        port=os.environ.get("DB_PORT", "5434"),
+        port=os.environ.get("DB_PORT", "5433"),
         dbname=os.environ.get("DB_NAME", "centro_deportivo"),
         user=os.environ.get("DB_USER", "postgres"),
-        password=os.environ.get("DB_PASSWORD", "12345"),
+        password=os.environ.get("DB_PASSWORD", "espoch1234"),
     )
     conn.autocommit = True
     with conn.cursor() as cur:
