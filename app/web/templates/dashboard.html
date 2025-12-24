@@ -2,24 +2,33 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Centro Deportivo</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/dashboard.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Dashboard</h1>
-        <div class="card">
-            <p><strong>Nombre:</strong> $nombre</p>
-            <p><strong>Email:</strong> $email</p>
-            <p><strong>Rol:</strong> $rol</p>
-            <p class="message">$message</p>
-            <a href="/logout" class="button-link">Cerrar sesión</a>
+    <!-- Barra Superior (Header) Semántica -->
+    <header class="dashboard-header">
+        <div class="header-left">
+            <div class="header-logo">Centro Deportivo</div>
+            <div class="header-user-info">
+                <span class="user-name">$nombre</span> 
+                <span class="user-email">($email)</span>
+                <span class="badge" style="background: #f0f0f0; color: #333;">$rol</span>
+            </div>
         </div>
-        <div class="card">
-            <h2>Acciones</h2>
-            <p>Contenido para rol $rol.</p>
-            <p>En una siguiente iteración se añadirá gestión de reservas.</p>
-        </div>
-    </div>
+        <a href="/logout" class="btn btn-danger" style="width: auto; margin: 0; padding: 8px 20px; font-size: 0.9rem;">Cerrar Sesión</a>
+    </header>
+
+    <!-- Contenido Principal -->
+    <main class="dashboard-container">
+        $content
+    </main>
+
+    <!-- Pie de Página (Footer) -->
+    <footer class="dashboard-footer">
+        <p>&copy; $year Centro Deportivo. Todos los derechos reservados.</p>
+    </footer>
 </body>
 </html>

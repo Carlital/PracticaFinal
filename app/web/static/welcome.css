@@ -1,0 +1,296 @@
+/* Reset básico */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif; /* Fuente para textos generales */
+    color: #ffffff;
+    overflow-x: hidden;
+}
+
+/* --- Hero Section (Fondo Completo) --- */
+.hero-background {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    /* Imagen de fondo: si la imagen está en integration/static/img use ruta absoluta */
+    background-image: url('/img/fondo_cancha6.jpg');
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+/* Capa oscura para que el texto se lea bien (como en tu imagen de referencia) */
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5); /* Oscuridad al 50% */
+    z-index: 1;
+}
+
+/* --- Navegación Superior --- */
+.navbar {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2rem 3rem;
+}
+.nav-links{
+    flex-wrap: wrap;
+}
+.nav-brand {
+    font-weight: 600;
+    font-size: 1.2rem;
+    letter-spacing: 1px;
+}
+
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.nav-item {
+    text-decoration: none;
+    color: #fff;
+    font-size: 0.9rem;
+    transition: opacity 0.3s;
+}
+
+.nav-item:hover {
+    opacity: 0.8;
+}
+
+.user-greeting {
+    font-size: 0.9rem;
+    opacity: 0.7;
+    margin-right: 10px;
+}
+
+/* Botón pequeño de registro en el nav */
+.button-outline-small {
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 8px 16px;
+    border-radius: 20px;
+}
+
+/* --- Contenido Central --- */
+.hero-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    margin-bottom: 10vh; /* Subir un poco el contenido visualmente */
+    padding: 0 20px;
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Tipografía estilo "Yardsale" */
+.hero-title {
+    font-family: 'Playfair Display', serif; /* Fuente elegante */
+    font-size: 4rem;
+    line-height: 1.1;
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+    max-width: 90%;
+    margin-left: auto;
+    margin-right: auto;
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+.hero-subtitle {
+    font-size: 1.1rem;
+    margin-bottom: 2.5rem;
+    opacity: 0.9;
+    font-weight: 300;
+    letter-spacing: 0.5px;
+}
+
+/* --- Botones Principales --- */
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+}
+
+.cta-button {
+    text-decoration: none;
+    padding: 14px 32px;
+    border-radius: 50px; /* Bordes muy redondos */
+    font-weight: 500;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    min-width: 160px;
+}
+
+/* Estilo Botón Blanco Relleno */
+.cta-button.primary {
+    background-color: #ffffff;
+    color: #000000;
+    border: 2px solid #ffffff;
+}
+
+.cta-button.primary:hover {
+    background-color: #e6e6e6;
+    border-color: #e6e6e6;
+    transform: translateY(-2px);
+}
+
+/* Estilo Botón Transparente (Outline) */
+.cta-button.secondary {
+    background-color: transparent;
+    color: #ffffff;
+    border: 2px solid #ffffff;
+}
+
+.cta-button.secondary:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+}
+
+/* --- Responsividad --- */
+@media (max-width: 768px) {
+    .hero-title {
+        font-size: 2.5rem;
+    }
+    
+    .navbar {
+        padding: 1.5rem;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+
+/*
+  ==========================================
+  ANIMACIÓN DE BIENVENIDA (POST-LOGIN)
+  ==========================================
+*/
+
+/* Define la animación de aparecer y deslizar */
+@keyframes fadeInSlide {
+    0% { opacity: 0; transform: translateY(30px) scale(0.95); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Define la animación de teclear (simula escribir el texto) */
+@keyframes typing {
+    from { width: 0; }
+    to { width: 100%; }
+}
+
+/* Contenedor que desaparece después de la animación para mostrar el contenido original */
+.welcome-animation-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    /* Empieza la animación */
+    animation: fadeOutWrapper 0.3s ease-out 6.5s forwards; 
+}
+
+/* Oculta el contenido estático al iniciar la animación */
+/* .hero-content .hero-title, 
+.hero-content .hero-subtitle,
+.hero-content .action-buttons {
+    opacity: 0;
+    animation: fadeInDelay 0.5s ease-out 7s forwards;
+} */
+
+.welcome-animation-wrapper ~ .hero-title,
+.welcome-animation-wrapper ~ .hero-subtitle,
+.welcome-animation-wrapper ~ .action-buttons {
+opacity: 0;
+animation: fadeInDelay 0.5s ease-out 7s forwards;
+}
+
+@keyframes fadeInDelay {
+    to { opacity: 1; }
+}
+
+@keyframes fadeOutWrapper {
+    to { opacity: 0; visibility: hidden; }
+}
+
+
+/* Estilo del texto principal de bienvenida */
+.animated-welcome-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 5rem;
+    line-height: 1.1;
+    color: white;
+    overflow: hidden; /* Necesario para el efecto de teclear */
+    white-space: nowrap; /* Mantiene el texto en una línea */
+    border-right: .15em solid white; /* Cursor de tecleo */
+    margin: 0 auto;
+    letter-spacing: .15em;
+    animation: 
+        typing 2s steps(40, end), /* Simula el tecleo */
+        blink-caret .75s step-end infinite, /* Parpadeo del cursor */
+        fadeInSlide 0.5s ease-out;
+    animation-fill-mode: forwards;
+    width: 0;
+    max-width: 100%;
+    transition: opacity 0.5s;
+}
+
+/* Estilo del subtítulo animado */
+.animated-subtitle-text {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.4rem;
+    color: rgba(255, 255, 255, 0.8);
+    opacity: 0;
+    margin-top: 1rem;
+    animation: fadeInSlide 1s ease-out 2.5s forwards; /* Aparece después del título */
+}
+
+/* Animación del cursor de tecleo */
+@keyframes blink-caret {
+    from, to { border-color: transparent }
+    50% { border-color: white; }
+}
+
+/* Responsividad para que el texto grande no rompa el diseño */
+@media (max-width: 768px) {
+    .animated-welcome-text {
+        font-size: 3rem;
+        letter-spacing: .1em;
+        /* Permitir que el texto haga wrap en dispositivos pequeños */
+        white-space: normal;
+        width: auto;
+        border-right: none;
+        animation: fadeInSlide 0.5s ease-out;
+    }
+    .animated-subtitle-text {
+        font-size: 1rem;
+    }
+}
+
+/* Ajustes extra para pantallas muy pequeñas */
+@media (max-width: 480px) {
+    .hero-title { font-size: 1.8rem; }
+    .cta-button { padding: 10px 18px; min-width: 120px; }
+    .navbar { padding: 1rem 0.8rem; }
+}
