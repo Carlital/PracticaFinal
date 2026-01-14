@@ -1,1 +1,3 @@
 psycopg2-binary==2.9.9
+# Use a recent compatible Stripe SDK version (avoid mistyped 6.66.0)
+stripe>=12.0.0,<15.0.0

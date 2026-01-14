@@ -15,6 +15,7 @@ from app.repositories.admin_repository import AdminRepository
 from app.models.court import Court
 from app.services.auth_service import AuthService
 from app.services.reservation_service import ReservationService
+from app.services.payment_service import PaymentService
 
 # Forzar salida sin buffer para ver los logs
 sys.stdout.reconfigure(line_buffering=True)
@@ -44,11 +45,34 @@ class SimpleHandler(BaseHTTPRequestHandler):
         
         self.auth_service = AuthService(user_repo, session_repo)
         self.reservation_service = ReservationService(court_repo, reservation_repo)
+        self.payment_service = PaymentService(settings)
         self.settings = settings
         super().__init__(*args, **kwargs)
 
     def do_GET(self):
         parsed = urlparse(self.path)
+        # Webhook endpoint (only accept POST usually, but allow GET for simple health check)
+        if parsed.path == "/webhook/stripe":
+            # Simple info page
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(b"Stripe webhook endpoint")
+            return
+        # Admin payments view
+        if parsed.path == "/pagos/admin":
+            self.handle_payments_admin()
+            return
+        # Rutas de pagos
+        if parsed.path == "/pagos":
+            self.handle_payments_list()
+            return
+        if parsed.path == "/pagos/create":
+            self.render_payment_form(parsed)
+            return
+        if parsed.path.startswith("/pagos/checkout/success"):
+            self.handle_payments_checkout_success(parsed)
+            return
         if parsed.path == "/":
             self.render_html("welcome.html", {})
         elif parsed.path == "/login":
@@ -80,6 +104,16 @@ class SimpleHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urlparse(self.path)
+        # Rutas de pagos
+        if parsed.path == "/pagos/create":
+            self.handle_payment_create()
+            return
+        if parsed.path == "/pagos/checkout":
+            self.handle_payments_checkout()
+            return
+        if parsed.path == "/webhook/stripe":
+            self.handle_stripe_webhook()
+            return
         if parsed.path == "/login":
             self.handle_login()
         elif parsed.path == "/register":
@@ -172,6 +206,162 @@ class SimpleHandler(BaseHTTPRequestHandler):
             self.send_response(500)
             self.end_headers()
             self.wfile.write(f"Error: {str(e)}".encode("utf-8"))
+
+    def render_payment_form(self, parsed):
+        user = self.get_current_user()
+        if not user:
+            self.redirect("/login")
+            return
+        query = parse_qs(parsed.query)
+        reservation_id = int(query.get("reservation_id", [0])[0])
+        reserva = self.reservation_service.reservation_repo.find_by_id(reservation_id)
+        if not reserva:
+            self.redirect("/dashboard?msg=Reserva%20no%20encontrada")
+            return
+        # Sólo el dueño puede pagar
+        if reserva.user_id != user.id:
+            self.send_response(403)
+            self.end_headers()
+            return
+
+        cancha = self.reservation_service.court_repo.find_by_id(reserva.cancha_id)
+        dur_horas = (reserva.fecha_fin - reserva.fecha_inicio).total_seconds() / 3600
+        amount = float(cancha.precio_hora) * dur_horas
+
+        # Obtener métodos disponibles para el select
+        try:
+            methods = self.payment_service.method_repo.find_all()
+        except Exception:
+            methods = []
+
+        options_html = "".join([f"<option value=\"{m['id']}\">{m['nombre']}</option>" for m in methods])
+
+        template = load_template("payment_form.html")
+        html = template.safe_substitute(
+            reservation_id=reservation_id,
+            user_name=user.nombre,
+            cancha=cancha.nombre,
+            amount=f"{amount:.2f}",
+            currency="USD",
+            methods_options=options_html
+        )
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(html.encode("utf-8"))
+
+    def handle_payments_list(self):
+        user = self.get_current_user()
+        if not user:
+            self.redirect("/login")
+            return
+        rows = self.payment_service.payment_repo.find_by_user(user.id)
+        # For user full list, show sequential number + Reserva, Monto, Estado, Fecha
+        rows_html = "".join([
+            f"<tr><td>{i}</td><td>${r['amount']}</td><td>{r['estado']}</td><td>{r['created_at']}</td></tr>"
+            for i, r in enumerate(rows, start=1)
+        ])
+        template = load_template("payments_list_user.html")
+        content_html = template.safe_substitute(rows=rows_html)
+        self.render_dashboard_layout(user, "Usuario", "", content_html)
+
+    def handle_payments_checkout(self):
+        user = self.get_current_user()
+        if not user:
+            self.redirect("/login")
+            return
+        length = int(self.headers.get("Content-Length", "0"))
+        body = self.rfile.read(length).decode()
+        data = parse_qs(body)
+        try:
+            reservation_id = int(data.get("reservation_id", [0])[0])
+            result = self.payment_service.create_checkout_session(user, reservation_id)
+            # Redirigir a Stripe Checkout URL
+            self.send_response(302)
+            self.send_header("Location", result["url"])
+            self.end_headers()
+            return
+        except Exception as e:
+            # No exponemos la excepción completa al usuario (podría filtrar secretos).
+            print(f"[ERROR] Checkout creation failed: {repr(e)}")
+            # Redirigir con mensaje genérico para el usuario
+            self.redirect("/dashboard/usuario?msg=Error%20Checkout")
+
+    def handle_stripe_webhook(self):
+        # Leer payload y encabezado de firma
+        length = int(self.headers.get("Content-Length", "0"))
+        payload = self.rfile.read(length)
+        sig_header = self.headers.get("Stripe-Signature", "")
+        try:
+            result = self.payment_service.handle_stripe_event(payload, sig_header)
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"OK")
+            return
+        except Exception as e:
+            self.send_response(400)
+            self.end_headers()
+            self.wfile.write(f"Webhook error: {str(e)}".encode("utf-8"))
+            return
+
+    def handle_payments_admin(self):
+        user = self.get_current_user()
+        if not user:
+            self.redirect("/login")
+            return
+        if user.rol_id != 1:
+            self.redirect("/dashboard")
+            return
+        rows = self.payment_service.payment_repo.find_all_detailed()
+        # enumerate rows and show sequential index, reservation id, usuario, monto, metodo, estado, fecha
+        rows_html = "".join([
+            f"<tr><td>{i}</td><td>{r.get('usuario_nombre','')}</td><td>${r['amount']}</td><td>{(r.get('metodo_nombre') or '')}</td><td>{r['estado']}</td><td>{r['created_at']}</td></tr>"
+            for i, r in enumerate(rows, start=1)
+        ])
+        template = load_template("payments_list.html")
+        content_html = template.safe_substitute(rows=rows_html)
+        self.render_dashboard_layout(user, "Administrador", "", content_html)
+
+    def handle_payments_checkout_success(self, parsed):
+        user = self.get_current_user()
+        if not user:
+            self.redirect("/login")
+            return
+        params = parse_qs(parsed.query)
+        session_id = params.get("session_id", [None])[0]
+        if not session_id:
+            self.redirect("/dashboard/usuario?msg=Error%20Checkout")
+            return
+        try:
+            result = self.payment_service.finalize_checkout_session(session_id)
+            if result.get("ok"):
+                self.redirect("/dashboard/usuario?msg=Pago%20Exitoso")
+            else:
+                self.redirect("/dashboard/usuario?msg=Pago%20Fallido")
+        except Exception as e:
+            print(f"[ERROR] finalize_checkout_session failed: {repr(e)}")
+            self.redirect("/dashboard/usuario?msg=Error%20Checkout")
+
+    def handle_payment_create(self):
+        user = self.get_current_user()
+        if not user:
+            self.redirect("/login")
+            return
+        length = int(self.headers.get("Content-Length", "0"))
+        body = self.rfile.read(length).decode()
+        data = parse_qs(body)
+        try:
+            reservation_id = int(data.get("reservation_id")[0])
+            amount = data.get("amount")[0]
+            method = data.get("method", ["card"])[0]
+            payment_data = {"amount": amount, "method": method}
+            result = self.payment_service.process_payment(user, reservation_id, payment_data)
+            if result.get("ok"):
+                self.redirect("/dashboard/usuario?msg=Pago%20Exitoso")
+            else:
+                self.redirect("/dashboard/usuario?msg=Pago%20Fallido")
+        except Exception as e:
+            self.redirect(f"/dashboard/usuario?msg=Error%3A{str(e)}")
 
     def handle_booking(self):
         user = self.get_current_user()
@@ -343,13 +533,25 @@ class SimpleHandler(BaseHTTPRequestHandler):
         users = self.admin_repo.get_all_users()
         users_rows = "".join([f"<tr><td>{u['id']}</td><td>{u['nombre']}</td><td>{u['email']}</td><td>{u['rol']}</td></tr>" for u in users])
 
-        # Datos Reservas
+        # Datos Reservas (mostrar número secuencial 1..N en la columna ID)
         reservas = self.reservation_service.reservation_repo.find_all_detailed()
         reservas_rows = ""
-        for r in reservas:
-            # Acción: Ver Detalle
+        for idx, r in enumerate(reservas, start=1):
+            # Acción: Ver Detalle (link usa el id real)
             accion = f"<a href='/dashboard/admin/reservas/detalle?id={r['id']}' class='btn btn-secondary' style='padding:5px 10px; font-size:0.8rem;'>Ver Detalle</a>"
-            reservas_rows += f"<tr><td>{r['id']}</td><td>{r['usuario']}</td><td>{r['cancha']}</td><td>{r['fecha_inicio']}</td><td>{r['estado']}</td><td>{accion}</td></tr>"
+            reservas_rows += f"<tr><td>{idx}</td><td>{r['usuario']}</td><td>{r['cancha']}</td><td>{r['fecha_inicio']}</td><td>{r['estado']}</td><td>{accion}</td></tr>"
+
+        # Datos Pagos (admin)
+        try:
+            pagos = self.payment_service.payment_repo.find_all_detailed()
+        except Exception:
+            pagos = []
+        # Mostrar sólo las 5 filas más recientes (orden descendente por id)
+        pagos = sorted(pagos, key=lambda x: x.get('id', 0), reverse=True)[:5]
+        pagos_rows = ""
+        for idx, p in enumerate(pagos, start=1):
+            # First column: sequential reservation number (1..N in preview)
+            pagos_rows += f"<tr><td>{idx}</td><td>{p.get('usuario_nombre','')}</td><td>${p['amount']}</td><td>{(p.get('metodo_nombre') or '')}</td><td>{p['estado']}</td><td>{p['created_at']}</td></tr>"
 
         # Renderizar todo en dashboard_admin.html
         template = load_template("dashboard_admin.html")
@@ -358,6 +560,8 @@ class SimpleHandler(BaseHTTPRequestHandler):
             users_rows=users_rows,
             reservas_rows=reservas_rows
         )
+        # Inyectar la sección de pagos (usamos marcador HTML para evitar colisiones con Template)
+        content_html = content_html.replace("<!-- PAGOS_ROWS -->", pagos_rows)
         self.render_dashboard_layout(user, "Administrador", msg, content_html)
 
     def handle_dashboard(self, path: str):
@@ -395,10 +599,21 @@ class SimpleHandler(BaseHTTPRequestHandler):
 
                     accion = ""
                     if r['estado'] == 'pendiente':
-                        accion = f"<button type='button' class='btn' style='padding:5px 10px; font-size:0.8rem; width:auto; margin-right:5px; background-color:#1976d2; cursor:pointer;' title='Función de pago próximamente'>Pagar</button>"
-                        accion += f"<form action='/reservas/cancel' method='POST' style='display:inline'><input type='hidden' name='id' value='{r['id']}'><button type='submit' class='btn btn-danger' style='padding:5px 10px; font-size:0.8rem; width:auto; margin:0;'>Cancelar</button></form>"
+                        pay_link = f"/pagos/create?reservation_id={r['id']}"
+                        accion = (
+                            f"<div class='actions-inline'>"
+                            f"<a href='{pay_link}' class='btn btn-primary action-btn'>Pagar</a>"
+                            f"<form action='/reservas/cancel' method='POST' style='display:inline'>"
+                            f"<input type='hidden' name='id' value='{r['id']}'><button type='submit' class='btn btn-danger action-btn'>Cancelar</button></form>"
+                            f"</div>"
+                        )
                     elif r['estado'] == 'confirmada':
-                        accion = f"<form action='/reservas/cancel' method='POST' style='display:inline'><input type='hidden' name='id' value='{r['id']}'><button type='submit' class='btn btn-danger' style='padding:5px 10px; font-size:0.8rem; width:auto; margin:0;'>Cancelar</button></form>"
+                        accion = (
+                            f"<div class='actions-inline'>"
+                            f"<form action='/reservas/cancel' method='POST' style='display:inline'>"
+                            f"<input type='hidden' name='id' value='{r['id']}'><button type='submit' class='btn btn-danger action-btn'>Cancelar</button></form>"
+                            f"</div>"
+                        )
                     else:
                         accion = "<span style='color:#999; font-size:0.9rem;'>-</span>"
                     
@@ -409,12 +624,29 @@ class SimpleHandler(BaseHTTPRequestHandler):
             if user.rol_id == 1:
                 admin_controls = "<div style='background:#fff3e0; padding:10px; border:1px solid #ffe0b2; border-radius:8px; margin-bottom:20px; text-align:center;'>👀 Estás viendo la vista de Usuario. <a href='/dashboard/admin' style='font-weight:bold;'>Volver al Panel de Admin</a></div>"
 
+            # Cargar pagos del usuario
+            try:
+                mis_pagos = self.payment_service.payment_repo.find_by_user(user.id)
+            except Exception:
+                mis_pagos = []
+            if not mis_pagos:
+                pagos_rows = "<tr><td colspan='7' style='text-align:center; padding:20px;'>No tiene pagos registrados.</td></tr>"
+            else:
+                # Ordenar y mostrar hasta 5 filas (más recientes primero)
+                mis_pagos = sorted(mis_pagos, key=lambda x: x.get('id', 0), reverse=True)[:5]
+                pagos_rows = ""
+                for i, p in enumerate(mis_pagos, start=1):
+                    # Show sequential number, reservation id, amount, state, date for user preview
+                    pagos_rows += f"<tr><td>{i}</td><td>${p['amount']}</td><td>{p['estado']}</td><td>{p['created_at']}</td></tr>"
+
             # Cargar plantilla parcial de usuario
             template_user = load_template("dashboard_user.html")
             content_html = template_user.safe_substitute(
                 nombre=user.nombre + (" (Admin)" if user.rol_id == 1 else ""),
                 reservas_rows=reservas_rows
             )
+            # Inyectar la tabla de pagos en el marcador HTML
+            content_html = content_html.replace("<!-- PAGOS_ROWS -->", pagos_rows)
             content_html = admin_controls + content_html
         
         self.render_dashboard_layout(user, role_label, msg, content_html)

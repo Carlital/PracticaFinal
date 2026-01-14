@@ -61,3 +61,41 @@ VALUES
     ('Cancha Tenis A', 'tenis', 15.00),
     ('Coliseo Principal', 'basquet', 20.00)
 ON CONFLICT (nombre) DO NOTHING;
+
+-- Módulo de Pagos
+CREATE TABLE IF NOT EXISTS payment_methods (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL UNIQUE,
+    tipo VARCHAR(50) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS payments (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    reservation_id INTEGER NOT NULL REFERENCES reservas(id) ON DELETE CASCADE,
+    amount NUMERIC(10,2) NOT NULL,
+    currency VARCHAR(10) NOT NULL DEFAULT 'USD',
+    payment_method_id INTEGER NOT NULL REFERENCES payment_methods(id) ON DELETE CASCADE,
+    estado VARCHAR(20) NOT NULL DEFAULT 'pendiente', -- pendiente, confirmado, fallido
+    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS transactions (
+    id SERIAL PRIMARY KEY,
+    payment_id INTEGER NOT NULL REFERENCES payments(id) ON DELETE CASCADE,
+    gateway_ref VARCHAR(255),
+    status VARCHAR(20) NOT NULL, -- success, failed
+    details JSONB,
+    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_payments_user ON payments (user_id);
+CREATE INDEX IF NOT EXISTS idx_payments_reservation ON payments (reservation_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_payment ON transactions (payment_id);
+
+-- Métodos de pago
+INSERT INTO payment_methods (nombre, tipo)
+VALUES ('Tarjeta', 'card'), ('Efectivo', 'cash')
+ON CONFLICT (nombre) DO NOTHING;
+
+

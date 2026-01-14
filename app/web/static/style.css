@@ -208,6 +208,29 @@ button:active, .btn:active {
     margin-top: 0;
 }
 
+/* Utilidad: empuja elemento a la derecha dentro de un contenedor flex */
+.ml-auto {
+    margin-left: auto;
+}
+
+/* Botones de acciones en tablas/previews: mismo tamaño y agrupados */
+.action-btn {
+    display: inline-block;
+    width: auto;
+    min-width: 100px;
+    padding: 8px 16px;
+    font-size: 1rem;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.actions-inline {
+    display:flex;
+    gap:8px;
+    align-items:center;
+    justify-content:flex-start; /* align actions to the left */
+}
+
 .message-box {
     padding: 15px;
     border-radius: 8px;

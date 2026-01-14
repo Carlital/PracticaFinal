@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Pagar Reserva</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <div style="text-align:left; margin-bottom:12px;"><a href="/dashboard" style="text-decoration:none; color:#1976d2;">&larr; Volver al Dashboard</a></div>
+    <h1>Pagar Reserva #$reservation_id</h1>
+    <div class="card">
+      <p><strong>Usuario:</strong> $user_name</p>
+      <p><strong>Cancha:</strong> $cancha</p>
+      <p><strong>Monto a pagar:</strong> $amount $currency</p>
+
+      <form action="/pagos/checkout" method="POST">
+        <input type="hidden" name="reservation_id" value="$reservation_id">
+
+        <label for="method">Método de Pago</label>
+        <select id="method" name="method">
+          $methods_options
+        </select>
+
+        <label for="amount">Monto</label>
+        <input id="amount" name="amount" value="$amount" required readonly class="readonly-input">
+
+        <div style="display:flex; gap:10px; margin-top:12px; width:100%; align-items:center;">
+          <button type="submit" class="btn btn-primary action-btn">Pagar</button>
+          <a href="/dashboard" class="btn btn-secondary ml-auto action-btn" style="background:#f0f0f0; color:#333; text-decoration:none;">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

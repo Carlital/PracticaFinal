@@ -23,6 +23,12 @@
                 <label for="password">Contraseña</label>
                 <input type="password" id="password" name="password" required>
                 
+                <label for="rol">Tipo de Cuenta</label>
+                <select id="rol" name="rol" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px;">
+                    <option value="usuario">Usuario</option>
+                    <option value="admin">Administrador</option>
+                </select>
+
                 <button type="submit">Registrarse</button>
             </form>
             <p style="color: #d32f2f; margin-top: 10px; font-weight: 500;">$message</p>
