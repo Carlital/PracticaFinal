@@ -1,3 +1,15 @@
+# Database
 psycopg2-binary==2.9.9
-# Use a recent compatible Stripe SDK version (avoid mistyped 6.66.0)
+
+# Payment Gateway
 stripe>=12.0.0,<15.0.0
+
+# Testing
+pytest==9.0.2
+pytest-cov>=4.1.0
+
+# Configuration
+python-dotenv>=1.0.0
+
+# Email (standard library - no install needed, but documented here)
+# smtplib, email.mime (included in Python standard library)

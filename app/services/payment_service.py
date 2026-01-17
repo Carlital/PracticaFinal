@@ -1,7 +1,7 @@
 import os
 import uuid
 from decimal import Decimal
-from typing import Dict
+from typing import Dict, Optional
 import stripe
 
 from app.models.payment import Payment, Transaction
@@ -9,15 +9,19 @@ from app.repositories.payment_repository import PaymentRepository
 from app.repositories.reservation_repository import ReservationRepository
 from app.repositories.court_repository import CourtRepository
 from app.repositories.payment_method_repository import PaymentMethodRepository
+from app.repositories.user_repository import UserRepository
+from app.services.notification_service import NotificationService
 
 
 class PaymentService:
-    def __init__(self, settings):
+    def __init__(self, settings, user_repo: Optional[UserRepository] = None, notification_service: Optional[NotificationService] = None):
         self.settings = settings
         self.payment_repo = PaymentRepository(settings)
         self.reservation_repo = ReservationRepository(settings)
         self.court_repo = CourtRepository(settings)
         self.method_repo = PaymentMethodRepository(settings)
+        self.user_repo = user_repo
+        self.notification_service = notification_service
 
     def process_payment(self, user, reservation_id: int, payment_data: Dict) -> Dict:
         """Procesa un pago: valida la reserva, crea payment, simula gateway, crea transaction y actualiza estados.
@@ -95,6 +99,53 @@ class PaymentService:
             self.payment_repo.update_payment_status(payment.id, "confirmado")
             # Actualizar reserva a pagada
             self.reservation_repo.update_status(reservation_id, "pagada")
+            
+            # DEBUG: Verificar servicios disponibles
+            print(f"[DEBUG PAYMENT] notification_service exists: {self.notification_service is not None}")
+            print(f"[DEBUG PAYMENT] user_repo exists: {self.user_repo is not None}")
+            print(f"[DEBUG PAYMENT] user object exists: {user is not None}")
+            
+            # Send payment AND reservation confirmation emails
+            if self.notification_service and self.user_repo and user:
+                print("[DEBUG PAYMENT] All services available, sending emails...")
+                try:
+                    method_name = method_obj.get('nombre', 'Tarjeta') if method_obj else 'Tarjeta'
+                    from datetime import datetime
+                    
+                    # 1. Send payment confirmation
+                    payment_data_email = {
+                        "monto": str(provided_amount),
+                        "moneda": payment_data.get("currency", "USD"),
+                        "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                        "metodo": method_name,
+                        "cancha": cancha.nombre
+                    }
+                    print(f"[DEBUG PAYMENT] Sending payment email to {user.email}")
+                    self.notification_service.send_payment_confirmation(user, payment_data_email)
+                    print("[DEBUG PAYMENT] Payment email sent successfully!")
+                    
+                    # 2. Send reservation confirmation (now that it's paid)
+                    reserva = self.reservation_repo.find_by_id(reservation_id)
+                    if reserva:
+                        dur_horas = (reserva.fecha_fin - reserva.fecha_inicio).total_seconds() / 3600
+                        reservation_data_email = {
+                            "cancha": cancha.nombre,
+                            "deporte": cancha.deporte,
+                            "fecha_inicio": reserva.fecha_inicio.strftime("%d/%m/%Y %H:%M"),
+                            "fecha_fin": reserva.fecha_fin.strftime("%d/%m/%Y %H:%M"),
+                            "precio": f"{float(cancha.precio_hora) * dur_horas:.2f}"
+                        }
+                        print(f"[DEBUG PAYMENT] Sending reservation email to {user.email}")
+                        self.notification_service.send_reservation_confirmation(user, reservation_data_email)
+                        print("[DEBUG PAYMENT] Reservation email sent successfully!")
+                        
+                except Exception as e:
+                    print(f"[WARNING] Error sending confirmation emails: {e}")
+                    import traceback
+                    traceback.print_exc()
+            else:
+                print("[DEBUG PAYMENT] Skipping emails - missing service or user object")
+            
             return {"ok": True, "payment_id": payment.id, "transaction_id": tx.id, "gateway_ref": gateway_ref}
         else:
             self.payment_repo.update_payment_status(payment.id, "fallido")
@@ -219,6 +270,43 @@ class PaymentService:
             if success:
                 if reservation_id:
                     self.reservation_repo.update_status(reservation_id, "pagada")
+                
+                # 🔥 ENVIAR EMAILS después de pago exitoso con Stripe
+                if self.notification_service and self.user_repo:
+                    print("[DEBUG STRIPE] Sending emails after Stripe checkout...")
+                    try:
+                        user = self.user_repo.find_by_id(user_id)
+                        if user:
+                            from datetime import datetime
+                            
+                            # Email 1: Confirmación de pago
+                            payment_email_data = {
+                                "monto": str(amount),
+                                "moneda": "USD",
+                                "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                                "metodo": "Tarjeta (Stripe)",
+                                "cancha": cancha.nombre
+                            }
+                            print(f"[DEBUG STRIPE] Sending payment email to {user.email}")
+                            self.notification_service.send_payment_confirmation(user, payment_email_data)
+                            print("[DEBUG STRIPE] Payment email sent!")
+                            
+                            # Email 2: Confirmación de reserva
+                            reserv_email_data = {
+                                "cancha": cancha.nombre,
+                                "deporte": cancha.deporte,
+                                "fecha_inicio": reserva.fecha_inicio.strftime("%d/%m/%Y %H:%M"),
+                                "fecha_fin": reserva.fecha_fin.strftime("%d/%m/%Y %H:%M"),
+                                "precio": f"{amount:.2f}"
+                            }
+                            print(f"[DEBUG STRIPE] Sending reservation email to {user.email}")
+                            self.notification_service.send_reservation_confirmation(user, reserv_email_data)
+                            print("[DEBUG STRIPE] Reservation email sent!")
+                    except Exception as e:
+                        print(f"[WARNING] Error sending Stripe emails: {e}")
+                        import traceback
+                        traceback.print_exc()
+                
                 return {"ok": True, "handled": True}
             else:
                 return {"ok": False, "handled": True}

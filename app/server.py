@@ -16,6 +16,7 @@ from app.models.court import Court
 from app.services.auth_service import AuthService
 from app.services.reservation_service import ReservationService
 from app.services.payment_service import PaymentService
+from app.services.notification_service import NotificationService
 
 # Forzar salida sin buffer para ver los logs
 sys.stdout.reconfigure(line_buffering=True)
@@ -43,9 +44,12 @@ class SimpleHandler(BaseHTTPRequestHandler):
         reservation_repo = ReservationRepository(settings)
         self.admin_repo = AdminRepository(settings)
         
-        self.auth_service = AuthService(user_repo, session_repo)
-        self.reservation_service = ReservationService(court_repo, reservation_repo)
-        self.payment_service = PaymentService(settings)
+        # Initialize notification service
+        notification_service = NotificationService(settings)
+        
+        self.auth_service = AuthService(user_repo, session_repo, notification_service)
+        self.reservation_service = ReservationService(court_repo, reservation_repo, user_repo, notification_service)
+        self.payment_service = PaymentService(settings, user_repo, notification_service)
         self.settings = settings
         super().__init__(*args, **kwargs)
 

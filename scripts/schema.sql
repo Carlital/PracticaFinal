@@ -98,4 +98,20 @@ INSERT INTO payment_methods (nombre, tipo)
 VALUES ('Tarjeta', 'card'), ('Efectivo', 'cash')
 ON CONFLICT (nombre) DO NOTHING;
 
+-- Módulo de Notificaciones
+CREATE TABLE IF NOT EXISTS notifications (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    tipo VARCHAR(50) NOT NULL, -- welcome, reservation_confirmation, payment_confirmation, cancellation
+    asunto VARCHAR(255) NOT NULL,
+    contenido TEXT NOT NULL,
+    estado VARCHAR(20) NOT NULL DEFAULT 'pendiente', -- pendiente, enviado, fallido
+    sent_at TIMESTAMP WITHOUT TIME ZONE,
+    error_message TEXT,
+    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications (user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_estado ON notifications (estado);
+CREATE INDEX IF NOT EXISTS idx_notifications_tipo ON notifications (tipo);
 

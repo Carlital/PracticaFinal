@@ -27,7 +27,7 @@ Módulo inicial de autenticación y roles para un centro deportivo usando Python
    Copia `.env.example` a `.env` y ajusta valores:
    ```
    DB_HOST=localhost
-   DB_PORT=5434
+   DB_PORT=5432
    DB_NAME=centro_deportivo
    DB_USER=centro_user
    DB_PASSWORD=tu_password
@@ -91,8 +91,59 @@ README.md
 - Estilo OO con separación de capas (modelos, repositorios, servicios, servidor).
 - Manejo de errores mediante `ValueError` con mensajes claros para UI.
 - Agregar nuevas rutas siguiendo el patrón en `app/server.py`.
+- Notificaciones se envían de forma asíncrona y no bloquean la operación principal.
+
+##  Módulo de Notificaciones 📧
+
+### Configuración SMTP
+
+El sistema soporta notificaciones por email usando SMTP:
+
+**Outlook/Hotmail (Recomendado):**
+```env
+SMTP_HOST=smtp-mail.outlook.com
+SMTP_PORT=587
+SMTP_USER=tu_email@outlook.com
+SMTP_PASSWORD=tu_contraseña
+SMTP_FROM_EMAIL=tu_email@outlook.com
+SMTP_FROM_NAME=Centro Deportivo
+NOTIFICATION_MODE=smtp
+```
+
+**Modo Simulado (Testing):**
+```env
+NOTIFICATION_MODE=simulated
+```
+
+### Tipos de Notificaciones
+1. **Bienvenida**: Al registrar nuevo usuario
+2. **Confirmación de Reserva**: Al crear una reserva
+3. **Confirmación de Pago**: Al procesar un pago exitoso
+4. **Cancelación**: Al cancelar una reserva
+
+## Pruebas 🧪
+
+### Ejecutar Pruebas
+```bash
+# Todas las pruebas
+python -m pytest tests/ -v
+
+# Pruebas de integración
+python -m pytest tests/test_integration.py -v
+
+# Pruebas de aceptación (UAT)
+python -m pytest tests/test_acceptance.py -v
+
+# Pruebas de rendimiento (genera reporte JSON)
+python -m pytest tests/test_performance.py -v
+```
+
+### Cobertura de Pruebas
+- **Integración**: Flujo completo registro → reserva → pago → notificación
+- **Aceptación**: 7 criterios UAT desde perspectiva de usuario
+- **Rendimiento**: Tiempos de respuesta y capacidad concurrente
 
 ## Próximos pasos sugeridos
 - Añadir flujo de renovación de sesión y CSRF tokens.
-- Agregar pruebas de integración contra una instancia real de PostgreSQL.
-- Extender dashboard con módulos de reservas y pagos.
+- Implementar retry logic para notificaciones fallidas.
+- Extender con más tipos de notificaciones (recordatorios, promociones).

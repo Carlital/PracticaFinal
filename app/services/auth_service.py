@@ -6,12 +6,14 @@ from app.models.session import Session
 from app.models.user import User
 from app.repositories.session_repository import SessionRepository
 from app.repositories.user_repository import UserRepository
+from app.services.notification_service import NotificationService
 
 
 class AuthService:
-    def __init__(self, user_repo: UserRepository, session_repo: SessionRepository):
+    def __init__(self, user_repo: UserRepository, session_repo: SessionRepository, notification_service: Optional[NotificationService] = None):
         self.user_repo = user_repo
         self.session_repo = session_repo
+        self.notification_service = notification_service
 
     def registrar_usuario(self, nombre: str, email: str, password: str, rol_id: int) -> User:
         if not nombre or not email or not password:
@@ -26,7 +28,17 @@ class AuthService:
         user = User(nombre=nombre, email=email, password_hash="", rol_id=rol_id)
         user.set_password(password)
         user.validar_datos()
-        return self.user_repo.create(user)
+        created_user = self.user_repo.create(user)
+        
+        # Send welcome email notification
+        if self.notification_service:
+            try:
+                self.notification_service.send_welcome_email(created_user)
+            except Exception as e:
+                print(f"[WARNING] Error sending welcome email: {e}")
+                # Don't fail registration if email fails
+        
+        return created_user
 
     def autenticar(self, email: str, password: str) -> Tuple[User, Session]:
         user = self.user_repo.find_by_email(email)

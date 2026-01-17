@@ -27,6 +27,14 @@ class Settings:
     db_password: str
     secret_key: str
     server_port: int
+    # SMTP Configuration
+    smtp_host: str
+    smtp_port: int
+    smtp_user: str
+    smtp_password: str
+    smtp_from_email: str
+    smtp_from_name: str
+    notification_mode: str  # "smtp" or "simulated"
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -36,7 +44,15 @@ class Settings:
             db_port=int(os.environ.get("DB_PORT", "5433")),
             db_name=os.environ.get("DB_NAME", "centro_deportivo"),
             db_user=os.environ.get("DB_USER", "postgres"),
-            db_password=os.environ.get("DB_PASSWORD", "espoch1234"),
+            db_password=os.environ.get("DB_PASSWORD", "12345"),
             secret_key=os.environ.get("SECRET_KEY", "changeme"),
             server_port=int(os.environ.get("SERVER_PORT", "8003")),
+            # SMTP settings
+            smtp_host=os.environ.get("SMTP_HOST", "smtp-mail.outlook.com"),
+            smtp_port=int(os.environ.get("SMTP_PORT", "587")),
+            smtp_user=os.environ.get("SMTP_USER", ""),
+            smtp_password=os.environ.get("SMTP_PASSWORD", ""),
+            smtp_from_email=os.environ.get("SMTP_FROM_EMAIL", ""),
+            smtp_from_name=os.environ.get("SMTP_FROM_NAME", "Centro Deportivo"),
+            notification_mode=os.environ.get("NOTIFICATION_MODE", "simulated"),
         )

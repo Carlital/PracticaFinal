@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reserva Cancelada</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #868f96 0%, #596164 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .content h2 {
+            color: #596164;
+            margin-top: 0;
+        }
+
+        .cancellation-details {
+            background: #f8f9fa;
+            border-left: 4px solid #868f96;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .cancellation-details p {
+            margin: 10px 0;
+        }
+
+        .cancellation-details strong {
+            color: #596164;
+        }
+
+        .footer {
+            background: #f8f8f8;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>❌ Reserva Cancelada</h1>
+        </div>
+        <div class="content">
+            <h2>Hola, $nombre</h2>
+            <p>Tu reserva ha sido cancelada.</p>
+
+            <div class="cancellation-details">
+                <h3 style="margin-top: 0; color: #596164;">Detalles de la Reserva Cancelada</h3>
+                <p><strong>Cancha:</strong> $cancha</p>
+                <p><strong>Fecha:</strong> $fecha_inicio</p>
+            </div>
+
+            <p>Si la cancelación no fue realizada por ti, por favor contáctanos de inmediato.</p>
+            <p>Puedes realizar una nueva reserva en cualquier momento desde tu panel de usuario.</p>
+        </div>
+        <div class="footer">
+            <p>Centro Deportivo - Sistema de Reservas</p>
+            <p>Este es un email automático, por favor no responder.</p>
+        </div>
+    </div>
+</body>
+
+</html>

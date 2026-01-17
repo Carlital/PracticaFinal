@@ -1,0 +1,25 @@
+{
+  "fecha_generacion": "2026-01-16T16:48:10.366749",
+  "metricas": {
+    "crear_reserva_ms": 367.16246604919434,
+    "concurrent_reservations": {
+      "total": 10,
+      "successful": 10,
+      "failed": 0,
+      "time_seconds": 1.092660903930664,
+      "throughput": 9.151970171190971
+    },
+    "notification_throughput": {
+      "total_emails": 50,
+      "time_seconds": 140.56648540496826,
+      "emails_per_second": 0.3557035651560281
+    },
+    "availability_query_ms": 79.54239845275879
+  },
+  "resumen": {
+    "crear_reserva_objetivo_ms": 600,
+    "consulta_disponibilidad_objetivo_ms": 500,
+    "notificaciones_objetivo_s": 180,
+    "concurrencia_objetivo_exitosas": "90%"
+  }
+}
